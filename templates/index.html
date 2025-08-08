@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Instagram Manager</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/feather-icons/dist/feather.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    /* Dark dropdown styling */
+    select {
+      background-color: #000;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      appearance: none;
+    }
+    select option {
+      background-color: #000;
+      color: #fff;
+    }
+
+    /* Loader overlay */
+    .loader-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      backdrop-filter: blur(4px);
+    }
+    .loader-card {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2rem 3rem;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.2);
+      border-top: 4px solid #0d6efd;
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #loaderMessage { color: white; }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+    }
+    .toast {
+      padding: 10px 20px;
+      background: #333;
+      color: white;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast.success { background: #28a745; }
+    .toast.error { background: #dc3545; }
+
+    /* Delete modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+    .modal {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 300px;
+      text-align: center;
+    }
+    .modal button {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body class="app-body">
+
+<main class="main flex flex-col">
+  <aside class="sidebar">
+    <div class="logo">📱 IG&nbsp;Manager</div>
+    <nav>
+      <button data-tab="accountStatus" class="nav-btn active"><i data-feather="user"></i> Account</button>
+      <button data-tab="configuration" class="nav-btn"><i data-feather="settings"></i> Configuration</button>
+      <button data-tab="business" class="nav-btn"><i data-feather="briefcase"></i> Business</button>
+      <button data-tab="home" class="nav-btn"><i data-feather="home"></i> Home</button>
+      <button data-tab="analytics" class="nav-btn"><i data-feather="trending-up"></i> Analytics</button>
+      <button data-tab="insights" class="nav-btn"><i data-feather="bar-chart-2"></i> Insights</button>
+      <button data-tab="posts" class="nav-btn"><i data-feather="calendar"></i> Posts</button>
+
+    </nav>
+    <div class="logout-container">
+    <button id="logoutBtn" class="nav-btn logout-btn">
+        <i data-feather="log-out"></i> Logout
+    </button>
+    </div>
+
+  </aside>
+
+  <section class="content flex flex-grow">
+    <!-- Account -->
+    <div class="tab-panel active" id="accountStatus">
+      <h2>Account Status</h2>
+      <div class="glass-card" id="accountStatusContent"></div>
+    </div>
+
+    <!-- Config -->
+    <div class="tab-panel" id="configuration">
+      <h2>Configuration</h2>
+      <div class="glass-card">
+        <form id="configForm">
+          <label>Instagram Extended Access Token<input type="password" name="inst_access_token" required></label>
+          <label>Instagram Business User ID<input name="ig_user_id" required></label>
+          <label>Cloudinary Cloud Name<input name="cloudinary_cloud_name" required></label>
+          <label>Cloudinary API Key<input name="cloudinary_api_key" required></label>
+          <label>Cloudinary API Secret<input type="password" name="cloudinary_api_secret" required></label>
+          <button class="glow-btn">Save</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Business -->
+    <div class="tab-panel" id="business">
+      <h2>Business Information</h2>
+      <div class="glass-card">
+        <form id="businessForm">
+          <label>Business Name<input name="business_name" required></label>
+          <label>Business Introduction<input name="business_introduction" required></label>
+          <label>Products/Services Description<input name="products_services" required></label>
+          <button class="glow-btn">Save</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Home -->
+    <div class="tab-panel" id="home">
+      <h2>Schedule Criteria</h2>
+      <div class="glass-card">
+        <form id="criteriaForm">
+          <label>Number of posts per interval<input type="number" name="num_of_posts" min="1" value="1"></label>
+          <label>Frequency
+            <select name="frequency">
+              <option>Daily</option>
+              <option>Weekly</option>
+              <option>Monthly</option>
+            </select>
+          </label>
+          <label>Do not use for next (days)<input type="number" name="dontuseuntil" min="90" value="90"></label>
+          <label>Posting hours (comma separated)<input name="posting_hours" placeholder="11:00, 15:00"></label>
+          <button class="glow-btn">Update Criteria</button>
+        </form>
+        <h3>Current Criteria:</h3>
+        <div id="currentCriteria"></div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="tab-panel" id="analytics">
+      <h2>Analytics</h2>
+      <div class="glass-card" id="analyticsContent"></div>
+    </div>
+
+    <!-- Insights -->
+    <div class="tab-panel" id="insights">
+      <h2>Detailed Insights</h2>
+      <div class="glass-card" id="insightsContent"></div>
+    </div>
+
+    <!-- Posts -->
+    <div class="tab-panel" id="posts">
+      <h2>Scheduled Posts</h2>
+      <div class="flex-container">
+        <div id="calendar"></div>
+        <div id="postDetails" class="post-details"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Loader Overlay -->
+<div id="loaderOverlay" class="loader-overlay">
+  <div class="loader-card">
+    <div class="spinner"></div>
+    <p id="loaderMessage">Loading...</p>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal">
+    <p>Are you sure you want to delete this post?</p>
+    <button id="confirmDelete" class="glow-btn">Yes</button>
+    <button id="cancelDelete" class="glow-btn" style="background:#ef4444">No</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/feather-icons"></script>
+<script>
+const api = axios.create({ baseURL:"/api" });
+let deletePostId = null;
+
+/* Loader */
+function showLoader(msg="Loading...") {
+  document.getElementById("loaderMessage").textContent = msg;
+  document.getElementById("loaderOverlay").style.display = "flex";
+}
+function hideLoader() {
+  document.getElementById("loaderOverlay").style.display = "none";
+}
+
+/* Toast */
+function showToast(message, type="success") {
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.innerText = message;
+  document.getElementById("toastContainer").appendChild(toast);
+  setTimeout(()=> toast.classList.add("show"), 100);
+  setTimeout(()=>{
+    toast.classList.remove("show");
+    toast.remove();
+  }, 3000);
+}
+
+/* Delete Modal */
+document.getElementById("cancelDelete").onclick = ()=> {
+  document.getElementById("deleteModal").style.display = "none";
+  deletePostId = null;
+};
+document.getElementById("confirmDelete").onclick = ()=> {
+  if(deletePostId) {
+    showLoader("Deleting post...");
+    api.delete(`/posts/${deletePostId}`).then(()=>{
+      setTimeout(()=>{ hideLoader(); showToast("Post deleted"); loadPosts(); }, 2000);
+    }).catch(()=>{ hideLoader(); showToast("Error deleting post", "error"); });
+    document.getElementById("deleteModal").style.display = "none";
+    deletePostId = null;
+  }
+};
+
+/* Tab navigation */
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==="accountStatus") loadAccountStatus();
+    if(btn.dataset.tab==="configuration") loadConfig();
+    if(btn.dataset.tab==="business") loadBusiness();
+    if(btn.dataset.tab==="home") loadCriteria();
+    if(btn.dataset.tab==="analytics") loadAnalytics();
+    if(btn.dataset.tab==="insights") loadInsights();
+    if(btn.dataset.tab==="posts") loadPosts();
+  });
+});
+
+/* Forms */
+document.getElementById("configForm").addEventListener("submit", e=>{
+  e.preventDefault();
+  showLoader("Saving configuration...");
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  api.post("/config", data).then(()=>{
+    setTimeout(()=>{ hideLoader(); showToast("Configuration saved"); loadConfig(); }, 2000);
+  }).catch(()=>{ hideLoader(); showToast("Error saving configuration", "error"); });
+});
+
+document.getElementById("businessForm").addEventListener("submit", e=>{
+  e.preventDefault();
+  showLoader("Saving business info...");
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  api.post("/business", data).then(()=>{
+    setTimeout(()=>{ hideLoader(); showToast("Business info saved"); loadBusiness(); }, 2000);
+  }).catch(()=>{ hideLoader(); showToast("Error saving business info", "error"); });
+});
+
+document.getElementById("criteriaForm").addEventListener("submit", e=>{
+  e.preventDefault();
+  showLoader("Updating criteria...");
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  data.num_of_posts = parseInt(data.num_of_posts, 10);
+  data.dontuseuntil = parseInt(data.dontuseuntil, 10);
+  api.post("/criteria", data).then(()=>{
+    setTimeout(()=>{ hideLoader(); showToast("Criteria updated"); loadCriteria(); }, 2000);
+  }).catch(()=>{ hideLoader(); showToast("Error updating criteria", "error"); });
+});
+
+/* Loaders for tabs */
+function loadAccountStatus(){ api.get("/account_status").then(r=>{
+  const d=r.data;
+  document.getElementById("accountStatusContent").innerHTML=
+  `<p><strong>User:</strong> ${d.user_name}</p>
+   <p><strong>Status:</strong> ${d.account_status}</p>
+   <p><strong>Subscription:</strong> ${d.subscription_type}</p>
+   <p><strong>Posts used / limit:</strong> ${d.tokens_used} / ${d.total_token_limit}</p>`;
+});}
+
+function loadConfig(){ api.get("/config").then(r=>{
+  const f=document.getElementById("configForm");
+  Object.keys(r.data).forEach(k=>f[k]&&(f[k].value=r.data[k]));
+});}
+
+function loadBusiness(){ api.get("/business").then(r=>{
+  const f=document.getElementById("businessForm");
+  Object.keys(r.data).forEach(k=>f[k]&&(f[k].value=r.data[k]));
+});}
+
+function loadCriteria(){ api.get("/criteria").then(r=>{
+  const f=document.getElementById("criteriaForm");
+  Object.keys(r.data).forEach(k=>f[k]&&(f[k].value=r.data[k]));
+  const crit = r.data;
+  document.getElementById("currentCriteria").innerHTML = `
+  <div class="criteria-card">
+    <div>📌 <b>Posts:</b> ${crit.num_of_posts}</div>
+    <div>⏳ <b>Frequency:</b> ${crit.frequency}</div>
+    <div>🚫 <b>Do Not Use Until:</b> ${crit.dontuseuntil} days</div>
+    <div>🕒 <b>Posting Hours:</b> ${crit.posting_hours}</div>
+  </div>`;
+});}
+
+function loadAnalytics(){ /* add analytics logic */ }
+function loadInsights(){ /* add insights logic */ }
+
+/* Posts with FullCalendar */
+function loadPosts() {
+  api.get("/posts").then(r => {
+    const calendarEl = document.getElementById("calendar");
+    if (window.cal) window.cal.destroy();
+    window.cal = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridMonth",
+      events: r.data,
+      eventClick: info => {
+        const p = info.event.extendedProps || {};
+        document.getElementById("postDetails").innerHTML = `
+        <h3>Post #${info.event.id}</h3>
+        <img src="${p.image_url || ''}" width="200" style="border-radius:10px">
+        <p><strong>Status:</strong> ${p.status || 'N/A'}</p>
+        <p><strong>Scheduled:</strong> ${info.event.startStr}</p>
+        <label>New Date:</label>
+        <input type="datetime-local" id="edit-date-${info.event.id}" value="${new Date(info.event.start).toISOString().slice(0, 16)}">
+        <p><strong>Caption:</strong><br>
+            <textarea id="cap-${info.event.id}" rows="4">${p.caption || ''}</textarea>
+        </p>
+        <div class="post-details-buttons">
+            <button class="glow-btn" onclick="updateCaption(${info.event.id})">Update Caption</button>
+            <button class="glow-btn" onclick="updateDate(${info.event.id})">Update Date</button>
+        </div>
+        <div class="post-details-delete">
+            <button class="glow-btn" style="background:#ef4444" onclick="confirmDelete(${info.event.id})">Delete</button>
+        </div>
+        `;
+      }
+    });
+    window.cal.render();
+  });
+}
+
+/* Post actions */
+function updateCaption(postId) {
+  const newCaption = document.getElementById(`cap-${postId}`).value;
+  showLoader("Updating caption...");
+  api.put(`/posts/${postId}`, { caption: newCaption }).then(() => {
+    setTimeout(()=>{ hideLoader(); showToast("Caption updated"); loadPosts(); }, 2000);
+  }).catch(()=>{ hideLoader(); showToast("Error updating caption", "error"); });
+}
+
+function updateDate(postId) {
+  const newDate = document.getElementById(`edit-date-${postId}`).value;
+  showLoader("Updating date...");
+  api.put(`/posts/${postId}`, { scheduled_time: newDate }).then(() => {
+    setTimeout(()=>{ hideLoader(); showToast("Date updated"); loadPosts(); }, 2000);
+  }).catch(()=>{ hideLoader(); showToast("Error updating date", "error"); });
+}
+
+function confirmDelete(id) {
+  deletePostId = id;
+  document.getElementById("deleteModal").style.display = "flex";
+}
+
+feather.replace();
+document.querySelector('.nav-btn[data-tab="accountStatus"]').click();
+
+function deletePost(postId) {
+  if (confirm("Delete this post?")) {
+    showLoader("Deleting post...");
+    api.delete(`/posts/${postId}`).then(() => {
+      setTimeout(() => {
+        hideLoader();
+        showToast("Post deleted", "success");
+
+        // Force Posts tab to be the active one after reload
+        localStorage.setItem("activeTab", "posts");
+        
+        // Hard refresh the page
+        location.reload(true);
+      }, 500);
+    }).catch(err => {
+      hideLoader();
+      showToast("Error deleting post: " + err.message, "error");
+    });
+  }
+}
+
+// Restore active tab after page reload
+document.addEventListener("DOMContentLoaded", () => {
+  const activeTab = localStorage.getItem("activeTab");
+  if (activeTab) {
+    const tabButton = document.querySelector(`.nav-btn[data-tab="${activeTab}"]`);
+    if (tabButton) tabButton.click();
+    localStorage.removeItem("activeTab");
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  showLoader("Logging out...");
+  api.post("/logout").then(() => {
+    window.location.href = "/login";
+  }).catch(err => {
+    hideLoader();
+    showToast("Error logging out: " + err.message, "error");
+  });
+});
+
+
+</script>
+</body>
+</html>

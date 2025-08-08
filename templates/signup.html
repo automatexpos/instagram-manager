@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Sign up – Instagram Manager</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      background-size: 300% 300%;
+      animation: gradientMove 10s ease infinite;
+    }
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      text-align: center;
+      color: white;
+    }
+    h1 {
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .input-group {
+      position: relative;
+    }
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      outline: none;
+      font-size: 14px;
+      appearance: none;
+    }
+    .input-group label {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      transform: translateY(-50%);
+      color: #aaa;
+      font-size: 14px;
+      pointer-events: none;
+      transition: 0.3s ease;
+    }
+    .input-group input:focus + label,
+    .input-group input:not(:placeholder-shown) + label {
+      top: -8px;
+      left: 8px;
+      font-size: 12px;
+      background: rgba(0,0,0,0.5);
+      padding: 0 4px;
+      border-radius: 4px;
+      color: #0dcaf0;
+    }
+    select option {
+      background: #16213e;
+      color: white;
+    }
+    button {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #0dcaf0, #007bff);
+      color: white;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+    button:hover {
+      background: linear-gradient(90deg, #007bff, #0dcaf0);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .bottom-link {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #ccc;
+    }
+    .bottom-link a {
+      color: #0dcaf0;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+    .bottom-link a:hover {
+      text-decoration: underline;
+    }
+
+    .warning-message {
+      display: none;
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255, 0, 0, 0.4);
+      color: #ff6b6b;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="glass-card">
+    <h1>Create Account</h1>
+    <div id="warningMessage" class="warning-message"></div>
+    <form id="signupForm">
+      <div class="input-group">
+        <input name="username" placeholder=" " required>
+        <label>Username</label>
+      </div>
+      <div class="input-group">
+        <input type="email" name="email" placeholder=" " required>
+        <label>Email</label>
+      </div>
+      <div class="input-group">
+        <input type="password" name="password" placeholder=" " minlength="6" required>
+        <label>Password</label>
+      </div>
+      <div class="input-group">
+        <select name="plan" required>
+          <option value="Trial - 7 posts">Trial – 7 posts free</option>
+          <option value="Standard">Standard – 60 posts</option>
+          <option value="Premium">Premium – 120 posts</option>
+        </select>
+      </div>
+      <button>Create account</button>
+    </form>
+    <p class="bottom-link">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    document.getElementById("signupForm").addEventListener("submit", async e=>{
+      e.preventDefault();
+      const warning = document.getElementById("warningMessage");
+      warning.style.display = "none"; // hide old warning
+
+      const fd = new FormData(e.target);
+      const data = Object.fromEntries(fd);
+
+      try {
+        const res = await axios.post(
+          "{{ url_for('signup') }}",
+          JSON.stringify(data),
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        if(res.data.status === "ok") {
+          location.href = "{{ url_for('verify_page') }}?u=" + res.data.username;
+        } else {
+          warning.textContent = res.data.error || "An error occurred";
+          warning.style.display = "block";
+        }
+      } catch (err) {
+        warning.textContent = "Unable to sign up. Please try again.";
+        warning.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>

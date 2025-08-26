@@ -4,7 +4,7 @@ import random
 import re
 import smtplib
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from supabase import create_client, Client
 import cloudinary
 import requests
@@ -63,18 +63,24 @@ def delete_post(post_id):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+        username = request.form["username"].strip()
+        password = request.form["password"].strip()
+
         user = (supabase.table("user_info")
                         .select("*")
                         .eq("user_name", username)
-                        .eq("password", password)   # plain demo – hash later
+                        .eq("password", password)   # ⚠️ demo only — hash later
                         .execute()
                         .data)
+
         if user:
             session["user"] = user[0]
+            flash("Welcome back!", "success")   # green toast
             return redirect(url_for("index"))
-        return render_template("login.html", error="Invalid credentials")
+        else:
+            flash("Invalid credentials", "error")  # red toast
+            return redirect(url_for("login"))      # redirect so toast shows cleanly
+
     return render_template("login.html")
 
 

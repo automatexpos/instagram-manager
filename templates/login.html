@@ -39,9 +39,46 @@
     }
     .subtitle {
       font-size: 14px;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       color: #ccc;
     }
+
+    /* Toast container (top right corner) */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .toast {
+      min-width: 220px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideIn 0.4s ease, fadeOut 0.5s ease 3s forwards;
+    }
+    .toast.error {
+      background: linear-gradient(90deg, #ff4e50, #ff6b6b);
+    }
+    .toast.success {
+      background: linear-gradient(90deg, #00b09b, #96c93d);
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(100%); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateX(100%); }
+    }
+
     form {
       display: flex;
       flex-direction: column;
@@ -112,10 +149,21 @@
   </style>
 </head>
 <body>
+  <div class="toast-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="toast {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
   <div class="glass-card">
     <h1>Welcome Back</h1>
     <p class="subtitle">Log in to manage your Instagram like a pro ✨</p>
-    <form id="loginForm">
+
+    <form method="post">
       <div class="input-group">
         <input type="text" name="username" placeholder=" " required>
         <label>Username</label>
@@ -128,18 +176,5 @@
     </form>
     <p class="bottom-link">No account? <a href="{{ url_for('signup') }}">Sign up</a></p>
   </div>
-
-  <script>
-    document.getElementById("loginForm").addEventListener("submit", async e=>{
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const res = await fetch("{{ url_for('login') }}", {
-        method:"POST",
-        body: new URLSearchParams(fd)
-      });
-      if(res.ok) location.href="{{ url_for('index') }}";
-      else alert("Invalid credentials");
-    });
-  </script>
 </body>
 </html>

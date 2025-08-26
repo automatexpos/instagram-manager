@@ -31,8 +31,6 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app.secret_key = os.getenv("FLASK_SECRET", "dev-secret-change-me")
 
-
-
 def send_email_otp(to_email, otp, username):
     sender_email = os.getenv("EMAIL_SENDER")
     sender_password = os.getenv("EMAIL_PASSWORD") 

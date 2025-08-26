@@ -413,6 +413,10 @@ function loadPosts() {
         document.getElementById("postDetails").innerHTML = `
         <h3>Post #${info.event.id}</h3>
         <img src="${p.image_url || ''}" width="200" style="border-radius:10px">
+        <br>
+        <a href="${p.image_url}" target="_blank" style="color:white; font-weight:bold;">
+        View content
+        </a>
         <p><strong>Status:</strong> ${p.status || 'N/A'}</p>
         <p><strong>Scheduled:</strong> ${info.event.startStr}</p>
         <label>New Date:</label>

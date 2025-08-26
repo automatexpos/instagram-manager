@@ -351,8 +351,54 @@ function loadCriteria(){ api.get("/criteria").then(r=>{
   </div>`;
 });}
 
-function loadAnalytics(){ /* add analytics logic */ }
-function loadInsights(){ /* add insights logic */ }
+function loadAnalytics(){
+  showLoader("Loading analytics...");
+  api.get("/analytics").then(r=>{
+    hideLoader();
+    const d = r.data;
+    document.getElementById("analyticsContent").innerHTML = `
+      <h3>@${d.profile.username}</h3>
+      <img src="${d.profile.profile_picture_url}" width="80" style="border-radius:50%">
+      <p><b>Name:</b> ${d.profile.name}</p>
+      <p><b>Followers:</b> ${d.profile.followers_count}</p>
+      <p><b>Posts:</b> ${d.profile.media_count}</p>
+    `;
+  }).catch(err=>{
+    hideLoader();
+    showToast("Error loading analytics: " + err.message, "error");
+  });
+}
+
+function loadInsights(){
+  showLoader("Loading insights...");
+  api.get("/insights").then(r=>{
+    hideLoader();
+    const d = r.data;
+    document.getElementById("insightsContent").innerHTML = `
+      <p><b>Total Likes:</b> ${d.total_likes}</p>
+      <p><b>Total Comments:</b> ${d.total_comments}</p>
+      <canvas id="reachChart" height="150"></canvas>
+    `;
+    // draw reach chart
+    const ctx = document.getElementById("reachChart").getContext("2d");
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: d.reach_series.map(x=>x.date),
+        datasets: [{
+          label: "Reach",
+          data: d.reach_series.map(x=>x.value),
+          fill: false,
+          borderWidth: 2
+        }]
+      }
+    });
+  }).catch(err=>{
+    hideLoader();
+    showToast("Error loading insights: " + err.message, "error");
+  });
+}
+
 
 /* Posts with FullCalendar */
 function loadPosts() {

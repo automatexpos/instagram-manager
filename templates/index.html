@@ -370,7 +370,7 @@
     // async function loadAnalytics() { document.getElementById('analyticsContent').textContent = 'Coming soon…'; }
     // async function loadInsights() { document.getElementById('insightsContent').textContent = 'Coming soon…'; }
     async function loadAnalytics(){
-      showLoader("Loading analytics...");
+      showLoader("Loading Profile...");
       api.get("/analytics").then(r=>{
         hideLoader();
         const d = r.data;

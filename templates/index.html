@@ -439,50 +439,86 @@ function loadPosts() {
 }
 
 /* Post actions */
+/* Post actions with safety checks */
 function updateCaption(postId) {
-  const newCaption = document.getElementById(`cap-${postId}`).value;
+  if (!postId) {
+    showToast("Error: No post ID found", "error");
+    return;
+  }
+  const capEl = document.getElementById(`cap-${postId}`);
+  if (!capEl) {
+    showToast("Error: Caption field not found", "error");
+    return;
+  }
+  const newCaption = capEl.value;
   showLoader("Updating caption...");
-  api.put(`/posts/${postId}`, { caption: newCaption }).then(() => {
-    setTimeout(()=>{ hideLoader(); showToast("Caption updated"); loadPosts(); }, 2000);
-  }).catch(()=>{ hideLoader(); showToast("Error updating caption", "error"); });
+  api.put(`/posts/${postId}`, { caption: newCaption })
+    .then(() => {
+      setTimeout(() => {
+        hideLoader();
+        showToast("Caption updated");
+        loadPosts();
+      }, 1000);
+    })
+    .catch(err => {
+      hideLoader();
+      showToast("Error updating caption: " + err.message, "error");
+    });
 }
 
 function updateDate(postId) {
-  const newDate = document.getElementById(`edit-date-${postId}`).value;
+  if (!postId) {
+    showToast("Error: No post ID found", "error");
+    return;
+  }
+  const dateEl = document.getElementById(`edit-date-${postId}`);
+  if (!dateEl) {
+    showToast("Error: Date input not found", "error");
+    return;
+  }
+  const newDate = dateEl.value;
   showLoader("Updating date...");
-  api.put(`/posts/${postId}`, { scheduled_time: newDate }).then(() => {
-    setTimeout(()=>{ hideLoader(); showToast("Date updated"); loadPosts(); }, 2000);
-  }).catch(()=>{ hideLoader(); showToast("Error updating date", "error"); });
-}
-
-function confirmDelete(id) {
-  deletePostId = id;
-  document.getElementById("deleteModal").style.display = "flex";
-}
-
-feather.replace();
-document.querySelector('.nav-btn[data-tab="accountStatus"]').click();
-
-function deletePost(postId) {
-  if (confirm("Delete this post?")) {
-    showLoader("Deleting post...");
-    api.delete(`/posts/${postId}`).then(() => {
+  api.put(`/posts/${postId}`, { scheduled_time: newDate })
+    .then(() => {
       setTimeout(() => {
         hideLoader();
-        showToast("Post deleted", "success");
-
-        // Force Posts tab to be the active one after reload
-        localStorage.setItem("activeTab", "posts");
-        
-        // Hard refresh the page
-        location.reload(true);
-      }, 500);
-    }).catch(err => {
+        showToast("Date updated");
+        loadPosts();
+      }, 1000);
+    })
+    .catch(err => {
       hideLoader();
-      showToast("Error deleting post: " + err.message, "error");
+      showToast("Error updating date: " + err.message, "error");
     });
+}
+
+function deletePost(postId) {
+  if (!postId) {
+    showToast("Error: No post ID found", "error");
+    return;
+  }
+  if (confirm("Delete this post?")) {
+    showLoader("Deleting post...");
+    api.delete(`/posts/${postId}`)
+      .then(() => {
+        setTimeout(() => {
+          hideLoader();
+          showToast("Post deleted", "success");
+
+          // Force Posts tab to stay active after reload
+          localStorage.setItem("activeTab", "posts");
+
+          // Hard refresh the page
+          location.reload(true);
+        }, 500);
+      })
+      .catch(err => {
+        hideLoader();
+        showToast("Error deleting post: " + err.message, "error");
+      });
   }
 }
+
 
 // Restore active tab after page reload
 document.addEventListener("DOMContentLoaded", () => {

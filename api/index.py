@@ -296,9 +296,7 @@ def api_criteria():
     })
 
 
-
-
-@app.route("/api/analytics")
+@app.route("/api/analytics", methods=["GET", "POST"])
 def api_analytics():
     if "user" not in session:
         return jsonify({"error": "unauthorized"}), 401
@@ -328,7 +326,7 @@ def api_analytics():
     return jsonify({"profile": profile, "recent_posts": recent_posts})
 
 
-@app.route("/api/insights")
+@app.route("/api/insights", methods=["GET", "POST"])
 def api_insights():
     if "user" not in session:
         return jsonify({"error": "unauthorized"}), 401

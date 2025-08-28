@@ -1,546 +1,633 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
+  <meta charset="utf-8" />
   <title>Instagram Manager</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/feather-icons/dist/feather.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <style>
-    /* Dark dropdown styling */
-    select {
-      background-color: #000;
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      padding: 0.6rem 0.8rem;
-      appearance: none;
+    :root {
+      --bg: #0b0b0f; --panel: rgba(255,255,255,.05); --panel-2: rgba(255,255,255,.08);
+      --text: #f3f4f6; --muted: #a1a1aa; --brand: #5b9fff; --danger: #ef4444; --ok: #22c55e;
     }
-    select option {
-      background-color: #000;
-      color: #fff;
-    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: radial-gradient(1200px 800px at 10% 0%, #10131a 0%, #0b0b0f 45%); color: var(--text); }
+
+    /* Layout */
+    .main { min-height: 100vh; display: grid; grid-template-columns: 280px 1fr; }
+    .sidebar { border-right: 1px solid rgba(255,255,255,.06); padding: 18px; position: sticky; top: 0; height: 100vh; overflow: auto; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); }
+    .logo { font-weight: 600; letter-spacing: .5px; margin-bottom: 12px; }
+    nav { display: grid; gap: 8px; }
+    .nav-btn { text-align: left; width: 100%; border: 1px solid transparent; padding: 10px 12px; border-radius: 10px; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 10px; }
+    .nav-btn:hover { background: var(--panel); border-color: rgba(255,255,255,.08); }
+    .nav-btn.active { background: var(--panel-2); border-color: rgba(255,255,255,.12); }
+    .logout-container { margin-top: 12px; border-top: 1px dashed rgba(255,255,255,.08); padding-top: 12px; }
+
+    .content { padding: 24px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .glass-card { background: var(--panel); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    h2 { margin: 0 0 14px; font-weight: 600; }
+
+    /* Forms */
+    label { display: grid; gap: 8px; margin: 12px 0; font-size: 14px; color: var(--muted); }
+    input, textarea, select { width: 100%; background: #0e1116; border: 1px solid rgba(255,255,255,.08); color: var(--text); border-radius: 10px; padding: 10px 12px; font: inherit; outline: none; }
+    textarea { min-height: 90px; resize: vertical; }
+
+    .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .pill { font-size: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); padding: 4px 8px; border-radius: 999px; }
+
+    .glow-btn { background: linear-gradient(180deg, #2563eb, #1d4ed8); border: none; color: white; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 18px rgba(37,99,235,.35); }
+    .glow-btn.secondary { background: transparent; border: 1px solid rgba(255,255,255,.16); box-shadow: none; color: var(--text); }
+    .glow-btn.danger { background: linear-gradient(180deg, #dc2626, #b91c1c); box-shadow: 0 4px 18px rgba(220,38,38,.35); }
 
     /* Loader overlay */
-    .loader-overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      backdrop-filter: blur(4px);
-    }
-    .loader-card {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 2rem 3rem;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-    .spinner {
-      border: 4px solid rgba(255, 255, 255, 0.2);
-      border-top: 4px solid #0d6efd;
-      border-radius: 50%;
-      width: 40px; height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #loaderMessage { color: white; }
+    .loader-overlay { position: fixed; inset: 0; display: none; place-items: center; z-index: 60; backdrop-filter: blur(4px); background: rgba(3,6,12,.55); }
+    .loader-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 22px 26px; text-align: center; }
+    .spinner { border: 4px solid rgba(255,255,255,.18); border-top-color: var(--brand); width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 10px; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg);} }
 
-    /* Toast notifications */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 10000;
-    }
-    .toast {
-      padding: 10px 20px;
-      background: #333;
-      color: white;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      opacity: 0;
-      transform: translateY(-20px);
-      transition: opacity 0.3s, transform 0.3s;
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .toast.success { background: #28a745; }
-    .toast.error { background: #dc3545; }
+    /* Toaster */
+    .toast-container { position: fixed; right: 20px; top: 20px; z-index: 70; display: grid; gap: 10px; }
+    .toast { background: rgba(17,24,39,.9); border: 1px solid rgba(255,255,255,.12); padding: 10px 14px; border-radius: 10px; opacity: 0; transform: translateY(-8px); transition: .25s; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: rgba(34,197,94,.5); }
+    .toast.error { border-color: rgba(239,68,68,.5); }
 
-    /* Delete modal */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
-    }
-    .modal {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 300px;
-      text-align: center;
-    }
-    .modal button {
-      margin: 10px;
-    }
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; display: none; place-items: center; z-index: 80; background: rgba(0,0,0,.6); }
+    .modal { width: min(560px, 94vw); background: #0b0f16; color: var(--text); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 16px; }
+    .modal header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+
+    /* Workflow designer bits */
+    .wf-head { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .wf-tabs { display: inline-flex; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; overflow: hidden; }
+    .wf-tabs button { background: transparent; border: none; padding: 8px 12px; color: var(--text); cursor: pointer; }
+    .wf-tabs button.active { background: rgba(255,255,255,.08); }
+    .wf-toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .wf-canvas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+    .wf-list { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 12px; }
+    .wf-item { display: grid; gap: 4px; border: 1px dashed rgba(255,255,255,.14); padding: 10px; border-radius: 10px; margin-bottom: 8px; }
+    .wf-item .row { grid-template-columns: 1fr 1fr; }
+    .wf-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 16px; border: 1px dashed rgba(255,255,255,.12); border-radius: 10px; }
+
+    /* Existing list */
+    .wf-existing-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+    .wf-card { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid rgba(255,255,255,.1); padding: 10px; border-radius: 12px; background: rgba(255,255,255,.04); }
+    .wf-card h4 { margin: 0; }
+    .wf-card .muted { font-size: 12px; }
+    .wf-card .actions { justify-content: flex-end; }
+
+    /* Misc */
+    .flex-container { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
+    .post-details { background: var(--panel); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 16px; min-height: 260px; }
   </style>
 </head>
-<body class="app-body">
-
-<main class="main flex flex-col">
-  <aside class="sidebar">
-    <div class="logo">📱 IG&nbsp;Manager</div>
-    <nav>
-      <button data-tab="accountStatus" class="nav-btn active"><i data-feather="user"></i> Account</button>
-      <button data-tab="configuration" class="nav-btn"><i data-feather="settings"></i> Configuration</button>
-      <button data-tab="business" class="nav-btn"><i data-feather="briefcase"></i> Business</button>
-      <button data-tab="home" class="nav-btn"><i data-feather="home"></i> Home</button>
-      <button data-tab="analytics" class="nav-btn"><i data-feather="trending-up"></i> Analytics</button>
-      <button data-tab="insights" class="nav-btn"><i data-feather="bar-chart-2"></i> Insights</button>
-      <button data-tab="posts" class="nav-btn"><i data-feather="calendar"></i> Posts</button>
-
-    </nav>
-    <div class="logout-container">
-    <button id="logoutBtn" class="nav-btn logout-btn">
-        <i data-feather="log-out"></i> Logout
-    </button>
-    </div>
-
-  </aside>
-
-  <section class="content flex flex-grow">
-    <!-- Account -->
-    <div class="tab-panel active" id="accountStatus">
-      <h2>Account Status</h2>
-      <div class="glass-card" id="accountStatusContent"></div>
-    </div>
-
-    <!-- Config -->
-    <div class="tab-panel" id="configuration">
-      <h2>Configuration</h2>
-      <div class="glass-card">
-        <form id="configForm">
-          <label>Instagram Extended Access Token<input type="password" name="inst_access_token" required></label>
-          <label>Instagram Business User ID<input name="ig_user_id" required></label>
-          <label>Cloudinary Cloud Name<input name="cloudinary_cloud_name" required></label>
-          <label>Cloudinary API Key<input name="cloudinary_api_key" required></label>
-          <label>Cloudinary API Secret<input type="password" name="cloudinary_api_secret" required></label>
-          <button class="glow-btn">Save</button>
-        </form>
+<body>
+  <main class="main">
+    <aside class="sidebar">
+      <div class="logo">📱 IG Manager</div>
+      <nav>
+        <button data-tab="accountStatus" class="nav-btn active">Account</button>
+        <button data-tab="configuration" class="nav-btn">Configuration</button>
+        <button data-tab="business" class="nav-btn">Business</button>
+        <button data-tab="home" class="nav-btn">Home</button>
+        <button data-tab="analytics" class="nav-btn">Analytics</button>
+        <button data-tab="insights" class="nav-btn">Insights</button>
+        <button data-tab="posts" class="nav-btn">Posts</button>
+        <button data-tab="workflow" class="nav-btn">Workflow</button>
+      </nav>
+      <div class="logout-container">
+        <button id="logoutBtn" class="nav-btn">Logout</button>
       </div>
-    </div>
+    </aside>
 
-    <!-- Business -->
-    <div class="tab-panel" id="business">
-      <h2>Business Information</h2>
-      <div class="glass-card">
-        <form id="businessForm">
-          <label>Business Name<input name="business_name" required></label>
-          <label>Business Introduction<input name="business_introduction" required></label>
-          <label>Products/Services Description<input name="products_services" required></label>
-          <button class="glow-btn">Save</button>
-        </form>
+    <section class="content">
+      <!-- Account -->
+      <div class="tab-panel active" id="accountStatus">
+        <h2>Account Status</h2>
+        <div class="glass-card" id="accountStatusContent">Loading…</div>
       </div>
-    </div>
 
-    <!-- Home -->
-    <div class="tab-panel" id="home">
-      <h2>Schedule Criteria</h2>
-      <div class="glass-card">
-        <form id="criteriaForm">
-          <label>Number of posts per interval<input type="number" name="num_of_posts" min="1" value="1"></label>
-          <label>Frequency
-            <select name="frequency">
-              <option>Daily</option>
-              <option>Weekly</option>
-              <option>Monthly</option>
-            </select>
-          </label>
-          <label>Do not use for next (days)<input type="number" name="dontuseuntil" min="90" value="90"></label>
-          <label>Posting hours (comma separated)<input name="posting_hours" placeholder="11:00, 15:00"></label>
-          <button class="glow-btn">Update Criteria</button>
-        </form>
-        <h3>Current Criteria:</h3>
-        <div id="currentCriteria"></div>
-      </div>
-    </div>
-
-    <!-- Analytics -->
-    <div class="tab-panel" id="analytics">
-      <h2>Analytics</h2>
-      <div class="glass-card" id="analyticsContent"></div>
-    </div>
-
-    <!-- Insights -->
-    <div class="tab-panel" id="insights">
-      <h2>Detailed Insights</h2>
-      <div class="glass-card" id="insightsContent"></div>
-    </div>
-
-    <!-- Posts -->
-    <div class="tab-panel" id="posts">
-      <h2>Scheduled Posts</h2>
-      <div class="flex-container">
-        <div id="calendar"></div>
-        <div id="postDetails" class="post-details"></div>
-      </div>
-    </div>
-  </section>
-</main>
-
-<!-- Loader Overlay -->
-<div id="loaderOverlay" class="loader-overlay">
-  <div class="loader-card">
-    <div class="spinner"></div>
-    <p id="loaderMessage">Loading...</p>
-  </div>
-</div>
-
-<!-- Toast Container -->
-<div id="toastContainer" class="toast-container"></div>
-
-<!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal-overlay">
-  <div class="modal">
-    <p>Are you sure you want to delete this post?</p>
-    <button id="confirmDelete" class="glow-btn">Yes</button>
-    <button id="cancelDelete" class="glow-btn" style="background:#ef4444">No</button>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/feather-icons"></script>
-<script>
-const api = axios.create({ baseURL:"/api" });
-let deletePostId = null;
-
-/* Loader */
-function showLoader(msg="Loading...") {
-  document.getElementById("loaderMessage").textContent = msg;
-  document.getElementById("loaderOverlay").style.display = "flex";
-}
-function hideLoader() {
-  document.getElementById("loaderOverlay").style.display = "none";
-}
-
-/* Toast */
-function showToast(message, type="success") {
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.innerText = message;
-  document.getElementById("toastContainer").appendChild(toast);
-  setTimeout(()=> toast.classList.add("show"), 100);
-  setTimeout(()=>{
-    toast.classList.remove("show");
-    toast.remove();
-  }, 3000);
-}
-
-/* Delete Modal */
-document.getElementById("cancelDelete").onclick = ()=> {
-  document.getElementById("deleteModal").style.display = "none";
-  deletePostId = null;
-};
-document.getElementById("confirmDelete").onclick = ()=> {
-  if(deletePostId) {
-    showLoader("Deleting post...");
-    api.delete(`/posts/${deletePostId}`).then(()=>{
-      setTimeout(()=>{ hideLoader(); showToast("Post deleted"); loadPosts(); }, 2000);
-    }).catch(()=>{ hideLoader(); showToast("Error deleting post", "error"); });
-    document.getElementById("deleteModal").style.display = "none";
-    deletePostId = null;
-  }
-};
-
-/* Tab navigation */
-document.querySelectorAll('.nav-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-    document.getElementById(btn.dataset.tab).classList.add('active');
-    if(btn.dataset.tab==="accountStatus") loadAccountStatus();
-    if(btn.dataset.tab==="configuration") loadConfig();
-    if(btn.dataset.tab==="business") loadBusiness();
-    if(btn.dataset.tab==="home") loadCriteria();
-    if(btn.dataset.tab==="analytics") loadAnalytics();
-    if(btn.dataset.tab==="insights") loadInsights();
-    if(btn.dataset.tab==="posts") loadPosts();
-  });
-});
-
-/* Forms */
-document.getElementById("configForm").addEventListener("submit", e=>{
-  e.preventDefault();
-  showLoader("Saving configuration...");
-  const data = Object.fromEntries(new FormData(e.target).entries());
-  api.post("/config", data).then(()=>{
-    setTimeout(()=>{ hideLoader(); showToast("Configuration saved"); loadConfig(); }, 2000);
-  }).catch(()=>{ hideLoader(); showToast("Error saving configuration", "error"); });
-});
-
-document.getElementById("businessForm").addEventListener("submit", e=>{
-  e.preventDefault();
-  showLoader("Saving business info...");
-  const data = Object.fromEntries(new FormData(e.target).entries());
-  api.post("/business", data).then(()=>{
-    setTimeout(()=>{ hideLoader(); showToast("Business info saved"); loadBusiness(); }, 2000);
-  }).catch(()=>{ hideLoader(); showToast("Error saving business info", "error"); });
-});
-
-document.getElementById("criteriaForm").addEventListener("submit", e=>{
-  e.preventDefault();
-  showLoader("Updating criteria...");
-  const data = Object.fromEntries(new FormData(e.target).entries());
-  data.num_of_posts = parseInt(data.num_of_posts, 10);
-  data.dontuseuntil = parseInt(data.dontuseuntil, 10);
-  api.post("/criteria", data).then(()=>{
-    setTimeout(()=>{ hideLoader(); showToast("Criteria updated"); loadCriteria(); }, 2000);
-  }).catch(()=>{ hideLoader(); showToast("Error updating criteria", "error"); });
-});
-
-/* Loaders for tabs */
-function loadAccountStatus(){ api.get("/account_status").then(r=>{
-  const d=r.data;
-  document.getElementById("accountStatusContent").innerHTML=
-  `<p><strong>User:</strong> ${d.user_name}</p>
-   <p><strong>Status:</strong> ${d.account_status}</p>
-   <p><strong>Subscription:</strong> ${d.subscription_type}</p>
-   <p><strong>Posts used / limit:</strong> ${d.tokens_used} / ${d.total_token_limit}</p>`;
-});}
-
-function loadConfig(){ api.get("/config").then(r=>{
-  const f=document.getElementById("configForm");
-  Object.keys(r.data).forEach(k=>f[k]&&(f[k].value=r.data[k]));
-});}
-
-function loadBusiness(){ api.get("/business").then(r=>{
-  const f=document.getElementById("businessForm");
-  Object.keys(r.data).forEach(k=>f[k]&&(f[k].value=r.data[k]));
-});}
-
-function loadCriteria(){ api.get("/criteria").then(r=>{
-  const f=document.getElementById("criteriaForm");
-  Object.keys(r.data).forEach(k=>f[k]&&(f[k].value=r.data[k]));
-  const crit = r.data;
-  document.getElementById("currentCriteria").innerHTML = `
-  <div class="criteria-card">
-    <div>📌 <b>Posts:</b> ${crit.num_of_posts}</div>
-    <div>⏳ <b>Frequency:</b> ${crit.frequency}</div>
-    <div>🚫 <b>Do Not Use Until:</b> ${crit.dontuseuntil} days</div>
-    <div>🕒 <b>Posting Hours:</b> ${crit.posting_hours}</div>
-  </div>`;
-});}
-
-function loadAnalytics(){
-  showLoader("Loading analytics...");
-  api.get("/analytics").then(r=>{
-    hideLoader();
-    const d = r.data;
-    document.getElementById("analyticsContent").innerHTML = `
-      <h3>@${d.profile.username}</h3>
-      <img src="${d.profile.profile_picture_url}" width="80" style="border-radius:50%">
-      <p><b>Name:</b> ${d.profile.name}</p>
-      <p><b>Followers:</b> ${d.profile.followers_count}</p>
-      <p><b>Posts:</b> ${d.profile.media_count}</p>
-    `;
-  }).catch(err=>{
-    hideLoader();
-    showToast("Error loading analytics: " + err.message, "error");
-  });
-}
-
-function loadInsights(){
-  showLoader("Loading insights...");
-  api.get("/insights").then(r=>{
-    hideLoader();
-    const d = r.data;
-    document.getElementById("insightsContent").innerHTML = `
-      <p><b>Total Likes:</b> ${d.total_likes}</p>
-      <p><b>Total Comments:</b> ${d.total_comments}</p>
-      <canvas id="reachChart" height="150"></canvas>
-    `;
-    // draw reach chart
-    const ctx = document.getElementById("reachChart").getContext("2d");
-    new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: d.reach_series.map(x=>x.date),
-        datasets: [{
-          label: "Reach",
-          data: d.reach_series.map(x=>x.value),
-          fill: false,
-          borderWidth: 2
-        }]
-      }
-    });
-  }).catch(err=>{
-    hideLoader();
-    showToast("Error loading insights: " + err.message, "error");
-  });
-}
-
-
-/* Posts with FullCalendar */
-function loadPosts() {
-  api.get("/posts").then(r => {
-    const calendarEl = document.getElementById("calendar");
-    if (window.cal) window.cal.destroy();
-    window.cal = new FullCalendar.Calendar(calendarEl, {
-      initialView: "dayGridMonth",
-      events: r.data,
-      eventClick: info => {
-        const p = info.event.extendedProps || {};
-        document.getElementById("postDetails").innerHTML = `
-        <h3>Post #${info.event.id}</h3>
-        <img src="${p.image_url || ''}" width="200" style="border-radius:10px">
-        <br>
-        <a href="${p.image_url}" target="_blank" style="color:white; font-weight:bold;">
-        View content
-        </a>
-        <p><strong>Status:</strong> ${p.status || 'N/A'}</p>
-        <p><strong>Scheduled:</strong> ${info.event.startStr}</p>
-        <label>New Date:</label>
-        <input type="datetime-local" id="edit-date-${info.event.id}" value="${new Date(info.event.start).toISOString().slice(0, 16)}">
-        <p><strong>Caption:</strong><br>
-            <textarea id="cap-${info.event.id}" rows="4">${p.caption || ''}</textarea>
-        </p>
-        <div class="post-details-buttons">
-            <button class="glow-btn" onclick="updateCaption(${info.event.id})">Update Caption</button>
-            <button class="glow-btn" onclick="updateDate(${info.event.id})">Update Date</button>
+      <!-- Configuration -->
+      <div class="tab-panel" id="configuration">
+        <h2>Configuration</h2>
+        <div class="glass-card">
+          <form id="configForm">
+            <label>Instagram Extended Access Token<input type="password" name="inst_access_token" required /></label>
+            <label>Instagram Business User ID<input name="ig_user_id" required /></label>
+            <label>Cloudinary Cloud Name<input name="cloudinary_cloud_name" required /></label>
+            <label>Cloudinary API Key<input name="cloudinary_api_key" required /></label>
+            <label>Cloudinary API Secret<input type="password" name="cloudinary_api_secret" required /></label>
+            <div class="actions">
+              <button class="glow-btn" type="submit">Save</button>
+              <span class="muted">Stored securely on server</span>
+            </div>
+          </form>
         </div>
-        <div class="post-details-delete">
-            <button class="glow-btn" style="background:#ef4444" onclick="confirmDelete(${info.event.id})">Delete</button>
+      </div>
+
+      <!-- Business -->
+      <div class="tab-panel" id="business">
+        <h2>Business</h2>
+        <div class="glass-card">
+          <form id="businessForm">
+            <label>Business Name<input name="business_name" required /></label>
+            <label>Business Introduction<textarea name="business_introduction" required></textarea></label>
+            <label>Products/Services<textarea name="products_services" required></textarea></label>
+            <div class="actions"><button class="glow-btn" type="submit">Save</button></div>
+          </form>
         </div>
-        `;
-      }
-    });
-    window.cal.render();
-  });
-}
+      </div>
 
-/* Post actions */
-/* Post actions with safety checks */
-function updateCaption(postId) {
-  if (!postId) {
-    showToast("Error: No post ID found", "error");
-    return;
-  }
-  const capEl = document.getElementById(`cap-${postId}`);
-  if (!capEl) {
-    showToast("Error: Caption field not found", "error");
-    return;
-  }
-  const newCaption = capEl.value;
-  showLoader("Updating caption...");
-  api.put(`/posts/${postId}`, { caption: newCaption })
-    .then(() => {
-      setTimeout(() => {
-        hideLoader();
-        showToast("Caption updated");
-        loadPosts();
-      }, 1000);
-    })
-    .catch(err => {
-      hideLoader();
-      showToast("Error updating caption: " + err.message, "error");
-    });
-}
+      <!-- Home / Criteria -->
+      <div class="tab-panel" id="home">
+        <h2>Schedule Criteria</h2>
+        <div class="glass-card">
+          <form id="criteriaForm">
+            <div class="row">
+              <label>Posts per interval<input type="number" name="num_of_posts" min="1" value="1" /></label>
+              <label>Frequency
+                <select name="frequency">
+                  <option>Daily</option>
+                  <option>Weekly</option>
+                  <option>Monthly</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <label>Do not reuse for next (days)<input type="number" name="dontuseuntil" min="1" value="90" /></label>
+              <label>Posting hours (comma separated)<input name="posting_hours" placeholder="11:00, 15:00" /></label>
+            </div>
+            <div class="actions">
+              <button class="glow-btn" type="submit">Update Criteria</button>
+            </div>
+          </form>
+          <h3>Current Criteria</h3>
+          <div id="currentCriteria" class="glass-card" style="margin-top:10px;"></div>
+        </div>
+      </div>
 
-function updateDate(postId) {
-  if (!postId) {
-    showToast("Error: No post ID found", "error");
-    return;
-  }
-  const dateEl = document.getElementById(`edit-date-${postId}`);
-  if (!dateEl) {
-    showToast("Error: Date input not found", "error");
-    return;
-  }
-  const newDate = dateEl.value;
-  showLoader("Updating date...");
-  api.put(`/posts/${postId}`, { scheduled_time: newDate })
-    .then(() => {
-      setTimeout(() => {
-        hideLoader();
-        showToast("Date updated");
-        loadPosts();
-      }, 1000);
-    })
-    .catch(err => {
-      hideLoader();
-      showToast("Error updating date: " + err.message, "error");
-    });
-}
+      <!-- Analytics -->
+      <div class="tab-panel" id="analytics">
+        <h2>Analytics</h2>
+        <div class="glass-card" id="analyticsContent">Loading…</div>
+      </div>
 
-function deletePost(postId) {
-  if (!postId) {
-    showToast("Error: No post ID found", "error");
-    return;
-  }
-  if (confirm("Delete this post?")) {
-    showLoader("Deleting post...");
-    api.delete(`/posts/${postId}`)
-      .then(() => {
-        setTimeout(() => {
-          hideLoader();
-          showToast("Post deleted", "success");
+      <!-- Insights -->
+      <div class="tab-panel" id="insights">
+        <h2>Insights</h2>
+        <div class="glass-card" id="insightsContent">Loading…</div>
+      </div>
 
-          // Force Posts tab to stay active after reload
-          localStorage.setItem("activeTab", "posts");
+      <!-- Posts -->
+      <div class="tab-panel" id="posts">
+        <h2>Scheduled Posts</h2>
+        <div class="flex-container">
+          <div class="glass-card" id="calendar">Loading…</div>
+          <div class="post-details" id="postDetails">Select a post to view details</div>
+        </div>
+      </div>
 
-          // Hard refresh the page
-          location.reload(true);
-        }, 500);
-      })
-      .catch(err => {
-        hideLoader();
-        showToast("Error deleting post: " + err.message, "error");
+      <!-- Workflow -->
+      <div class="tab-panel" id="workflow">
+        <h2>Workflow</h2>
+        <div class="glass-card" id="workflowRoot">
+          <!-- Populated by enhancement script -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Global Loader -->
+  <div id="loaderOverlay" class="loader-overlay">
+    <div class="loader-card">
+      <div class="spinner"></div>
+      <div id="loaderMessage">Working…</div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Generic Modals used by Workflow -->
+  <div id="workflowNameModal" class="modal-overlay">
+    <div class="modal">
+      <header>
+        <h3>Name Workflow</h3>
+        <button class="glow-btn secondary" onclick="closeModal('workflowNameModal')">Close</button>
+      </header>
+      <label>Workflow Name<input id="workflowNameInput" placeholder="e.g., Welcome DMs" /></label>
+      <div class="actions">
+        <button id="saveWorkflowNameBtn" class="glow-btn">Save Name</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="triggerModal" class="modal-overlay">
+    <div class="modal">
+      <header>
+        <h3>Create Trigger</h3>
+        <button class="glow-btn secondary" onclick="closeModal('triggerModal')">Close</button>
+      </header>
+      <label>Type
+        <select id="triggerType">
+          <option value="comment">New Comment</option>
+          <!-- <option value="dm">New DM</option>
+          <option value="hashtag">Hashtag Match</option> -->
+        </select>
+      </label>
+      <label>Condition / Keyword<input id="triggerCondition" placeholder="#coupon OR contains:help" /></label>
+      <div class="actions">
+        <button id="createTriggerBtn" class="glow-btn">Add Trigger</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="actionModal" class="modal-overlay">
+    <div class="modal">
+      <header>
+        <h3>Add Action</h3>
+        <button class="glow-btn secondary" onclick="closeModal('actionModal')">Close</button>
+      </header>
+      <label>Reply to Comment<textarea id="replyComment"></textarea></label>
+      <label>DM Message<textarea id="dmMessage"></textarea></label>
+      <div class="actions">
+        <button id="saveActionBtn" class="glow-btn">Save Action</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation (posts) -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+      <header><h3>Delete Post</h3></header>
+      <p>Are you sure you want to delete this post?</p>
+      <div class="actions">
+        <button id="confirmDelete" class="glow-btn danger">Delete</button>
+        <button id="cancelDelete" class="glow-btn secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <script>
+    const api = axios.create({ baseURL: '/api' });
+
+    /* ---------- Helpers ---------- */
+    function showLoader(msg = 'Working…') { document.getElementById('loaderMessage').textContent = msg; document.getElementById('loaderOverlay').style.display = 'grid'; }
+    function hideLoader() { document.getElementById('loaderOverlay').style.display = 'none'; }
+    function showToast(message, type='success') { const c = document.getElementById('toastContainer'); const el = document.createElement('div'); el.className = `toast ${type}`; el.textContent = message; c.appendChild(el); requestAnimationFrame(() => el.classList.add('show')); setTimeout(() => { el.classList.remove('show'); el.remove(); }, 2600); }
+    function openModal(id) { document.getElementById(id).style.display = 'grid'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    /* ---------- Tabs ---------- */
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        const panel = document.getElementById(btn.dataset.tab); panel.classList.add('active');
+        switch (btn.dataset.tab) {
+          case 'accountStatus': loadAccountStatus(); break;
+          case 'configuration': loadConfig(); break;
+          case 'business': loadBusiness(); break;
+          case 'home': loadCriteria(); break;
+          case 'analytics': loadAnalytics(); break;
+          case 'insights': loadInsights(); break;
+          case 'posts': loadPosts(); break;
+          case 'workflow': loadWorkflow(); break;
+        }
       });
-  }
-}
+    });
+
+    /* ---------- Account ---------- */
+    async function loadAccountStatus() {
+      try { const { data } = await api.get('/account_status');
+        document.getElementById('accountStatusContent').innerHTML = `
+          <div class="row">
+            <div><div class="muted">User</div><div>${data.user_name ?? '-'}</div></div>
+            <div><div class="muted">Status</div><div class="pill">${data.account_status ?? '-'}</div></div>
+          </div>
+          <div class="row">
+            <div><div class="muted">Subscription</div><div>${data.subscription_type ?? '-'}</div></div>
+            <div><div class="muted">Posts used/limit</div><div>${data.tokens_used ?? 0} / ${data.total_token_limit ?? 0}</div></div>
+          </div>`;
+      } catch (e) { document.getElementById('accountStatusContent').textContent = 'Failed to load.'; }
+    }
+
+    /* ---------- Config ---------- */
+    document.getElementById('configForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const data = Object.fromEntries(new FormData(e.target).entries());
+      showLoader('Saving configuration…');
+      try { await api.post('/config', data); showToast('Configuration saved'); }
+      catch (e) { showToast('Error saving configuration', 'error'); }
+      finally { hideLoader(); loadConfig(); }
+    });
+    async function loadConfig() { try { const { data } = await api.get('/config'); const f = document.getElementById('configForm'); Object.entries(data).forEach(([k,v]) => { if (f[k] !== undefined && f[k] !== null) f[k].value = v ?? ''; }); } catch (e) {} }
+
+    /* ---------- Business ---------- */
+    document.getElementById('businessForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const data = Object.fromEntries(new FormData(e.target).entries()); showLoader('Saving business info…');
+      try { await api.post('/business', data); showToast('Business info saved'); }
+      catch (e) { showToast('Error saving business info', 'error'); }
+      finally { hideLoader(); loadBusiness(); }
+    });
+    async function loadBusiness() { try { const { data } = await api.get('/business'); const f = document.getElementById('businessForm'); Object.entries(data).forEach(([k,v]) => { if (f[k] !== undefined && f[k] !== null) f[k].value = v ?? ''; }); } catch (e) {} }
+
+    /* ---------- Criteria ---------- */
+    document.getElementById('criteriaForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const data = Object.fromEntries(new FormData(e.target).entries()); data.num_of_posts = +data.num_of_posts; data.dontuseuntil = +data.dontuseuntil; showLoader('Updating criteria…');
+      try { await api.post('/criteria', data); showToast('Criteria updated'); }
+      catch (e) { showToast('Error updating criteria', 'error'); }
+      finally { hideLoader(); loadCriteria(); }
+    });
+    async function loadCriteria() {
+      try { const { data } = await api.get('/criteria'); const f = document.getElementById('criteriaForm'); Object.entries(data).forEach(([k,v]) => { if (f[k] !== undefined && f[k] !== null) f[k].value = v ?? ''; });
+        const c = data; document.getElementById('currentCriteria').innerHTML = `
+          <div class="row">
+            <div><div class="muted">Posts</div><div>${c.num_of_posts ?? '-'}</div></div>
+            <div><div class="muted">Frequency</div><div class="pill">${c.frequency ?? '-'}</div></div>
+          </div>
+          <div class="row">
+            <div><div class="muted">No-reuse days</div><div>${c.dontuseuntil ?? '-'}</div></div>
+            <div><div class="muted">Posting hours</div><div>${c.posting_hours ?? '-'}</div></div>
+          </div>`;
+      } catch (e) { document.getElementById('currentCriteria').textContent = 'Failed to load.'; }
+    }
+
+    /* ---------- Analytics / Insights (placeholder loaders) ---------- */
+    async function loadAnalytics() { document.getElementById('analyticsContent').textContent = 'Coming soon…'; }
+    async function loadInsights() { document.getElementById('insightsContent').textContent = 'Coming soon…'; }
+
+    /* ---------- Posts (minimal calendar) ---------- */
+    let calendarInstance = null; let deletePostId = null;
+    async function loadPosts() {
+      const el = document.getElementById('calendar'); el.textContent = '';
+      const cal = new FullCalendar.Calendar(el, { initialView: 'dayGridMonth', height: 600, events: async (info, success, failure) => {
+        try { const { data } = await api.get('/posts', { params: { start: info.startStr, end: info.endStr } }); success((data || []).map(p => ({ id: p.id, title: p.title || 'Post', start: p.start || p.date || p.scheduled_at, extendedProps: p }))); }
+        catch (e) { failure(e); }
+      }, eventClick: (info) => { const p = info.event.extendedProps; document.getElementById('postDetails').innerHTML = `
+          <div class="row"><div><div class="muted">Title</div><div>${p.title ?? 'Post'}</div></div>
+          <div><div class="muted">Status</div><div class="pill">${p.status ?? 'scheduled'}</div></div></div>
+          <div style="margin-top:10px;" class="actions">
+            <button class="glow-btn danger" onclick="openDelete('${info.event.id}')">Delete</button>
+          </div>`; } });
+      cal.render(); calendarInstance = cal;
+    }
+    function openDelete(id) { deletePostId = id; document.getElementById('deleteModal').style.display = 'grid'; }
+    document.getElementById('cancelDelete').onclick = () => { document.getElementById('deleteModal').style.display = 'none'; deletePostId = null; };
+    document.getElementById('confirmDelete').onclick = async () => { if (!deletePostId) return; showLoader('Deleting post…'); try { await api.delete(`/posts/${deletePostId}`); showToast('Post deleted'); } catch(e){ showToast('Failed to delete', 'error'); } finally { hideLoader(); document.getElementById('deleteModal').style.display = 'none'; if (calendarInstance) calendarInstance.refetchEvents(); }};
+
+    /* ---------- WORKFLOW ENHANCEMENTS (Box 2 only) ---------- */
+    let wfBuilt = false; let currentWorkflow = { id: null, name: '', triggers: [], actions: [] };
+
+    function buildWorkflowUI(root) {
+      root.innerHTML = `
+        <div class="wf-head">
+          <div class="wf-tabs">
+            <button id="wfTabCreate" class="active">Create New</button>
+            <button id="wfTabExisting">Existing Workflows</button>
+          </div>
+          <div class="wf-toolbar" style="margin-left:auto;">
+            <button id="btnNewWorkflow" class="glow-btn">+ Create New</button>
+            <button id="btnAddTrigger" class="glow-btn secondary">+ Add Trigger</button>
+            <button id="btnAddAction" class="glow-btn secondary">+ Add Action</button>
+            <button id="btnSaveWorkflow" class="glow-btn">Save Workflow</button>
+            <button id="btnResetWorkflow" class="glow-btn secondary">Reset</button>
+          </div>
+        </div>
+
+        <div id="wfCreatePane">
+          <div class="muted">Name: <span id="wfNameDisplay" class="pill">(none)</span></div>
+          <div class="wf-canvas">
+            <div class="wf-list">
+              <h4>Triggers</h4>
+              <div id="wfTriggers"></div>
+              <div id="wfTriggersEmpty" class="wf-empty">No triggers yet. Click <b>+ Add Trigger</b>.</div>
+            </div>
+            <div class="wf-list">
+              <h4>Actions</h4>
+              <div id="wfActions"></div>
+              <div id="wfActionsEmpty" class="wf-empty">No actions yet. Click <b>+ Add Action</b>.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="wfExistingPane" style="display:none;">
+          <div class="wf-existing-head">
+            <input id="wfFilter" placeholder="Filter by name" />
+            <button id="wfRefresh" class="glow-btn secondary">Refresh</button>
+          </div>
+          <div id="wfList" class="grid" style="display:grid; gap:10px;"></div>
+        </div>`;
+
+      // Tabs inside workflow
+      const tabCreate = root.querySelector('#wfTabCreate');
+      const tabExisting = root.querySelector('#wfTabExisting');
+      const paneCreate = root.querySelector('#wfCreatePane');
+      const paneExisting = root.querySelector('#wfExistingPane');
+      tabCreate.addEventListener('click', () => { tabCreate.classList.add('active'); tabExisting.classList.remove('active'); paneCreate.style.display='block'; paneExisting.style.display='none'; });
+      tabExisting.addEventListener('click', () => { tabExisting.classList.add('active'); tabCreate.classList.remove('active'); paneCreate.style.display='none'; paneExisting.style.display='block'; refreshExistingWorkflows(); });
+
+      // Toolbar
+      root.querySelector('#btnNewWorkflow').addEventListener('click', () => { currentWorkflow = { id: null, name: '', triggers: [], actions: [] }; renderWorkflow(); openModal('workflowNameModal'); });
+      root.querySelector('#btnAddTrigger').addEventListener('click', () => { if (!currentWorkflow.name) openModal('workflowNameModal'); else openModal('triggerModal'); });
+      root.querySelector('#btnAddAction').addEventListener('click', () => { if (!currentWorkflow.name) openModal('workflowNameModal'); else openModal('actionModal'); });
+      root.querySelector('#btnSaveWorkflow').addEventListener('click', persistWorkflow);
+      root.querySelector('#btnResetWorkflow').addEventListener('click', () => { currentWorkflow = { id: currentWorkflow.id, name: currentWorkflow.name, triggers: [], actions: [] }; renderWorkflow(); });
+
+      // Existing list controls
+      root.querySelector('#wfRefresh').addEventListener('click', refreshExistingWorkflows);
+      root.querySelector('#wfFilter').addEventListener('input', () => refreshExistingWorkflows());
+
+      // Initial state
+      renderWorkflow();
+    }
+
+    function renderWorkflow() {
+      document.getElementById('wfNameDisplay').textContent = currentWorkflow.name || '(none)';
+      const triggersEl = document.getElementById('wfTriggers');
+      const actionsEl = document.getElementById('wfActions');
+      const trigEmpty = document.getElementById('wfTriggersEmpty');
+      const actEmpty = document.getElementById('wfActionsEmpty');
+
+      // Triggers
+      triggersEl.innerHTML = '';
+      if ((currentWorkflow.triggers || []).length === 0) { trigEmpty.style.display='block'; }
+      else { trigEmpty.style.display='none'; currentWorkflow.triggers.forEach((t, idx) => {
+        const el = document.createElement('div'); el.className = 'wf-item';
+        el.innerHTML = `
+          <div class="row">
+            <label>Type<input value="${t.type}" disabled /></label>
+            <label>Condition<input value="${t.condition ?? ''}" disabled /></label>
+          </div>
+          <div class="actions"><button class="glow-btn secondary" data-idx="${idx}" data-kind="trigger">Remove</button></div>`;
+        el.querySelector('button').addEventListener('click', onRemoveItem);
+        triggersEl.appendChild(el);
+      }); }
+
+      // Actions
+      actionsEl.innerHTML = '';
+      if ((currentWorkflow.actions || []).length === 0) { actEmpty.style.display='block'; }
+      else { actEmpty.style.display='none'; currentWorkflow.actions.forEach((a, idx) => {
+        const el = document.createElement('div'); el.className = 'wf-item';
+        el.innerHTML = `
+          <div class="row">
+            <label>Reply<textarea disabled>${a.reply ?? ''}</textarea></label>
+            <label>DM<textarea disabled>${a.dm ?? ''}</textarea></label>
+          </div>
+          <div class="actions"><button class="glow-btn secondary" data-idx="${idx}" data-kind="action">Remove</button></div>`;
+        el.querySelector('button').addEventListener('click', onRemoveItem);
+        actionsEl.appendChild(el);
+      }); }
+    }
+
+    function onRemoveItem(e) {
+      const idx = +e.target.dataset.idx; const kind = e.target.dataset.kind;
+      if (kind === 'trigger') currentWorkflow.triggers.splice(idx,1); else currentWorkflow.actions.splice(idx,1);
+      renderWorkflow();
+    }
+
+    // Modals handlers
+    document.getElementById('saveWorkflowNameBtn').addEventListener('click', () => {
+      const name = document.getElementById('workflowNameInput').value.trim();
+      if (!name) { showToast('Please enter a name', 'error'); return; }
+      currentWorkflow.name = name; closeModal('workflowNameModal'); renderWorkflow();
+    });
+
+    document.getElementById('createTriggerBtn').addEventListener('click', () => {
+      const type = document.getElementById('triggerType').value; const condition = document.getElementById('triggerCondition').value.trim();
+      currentWorkflow.triggers.push({ type, condition }); closeModal('triggerModal'); renderWorkflow();
+    });
+
+    document.getElementById('saveActionBtn').addEventListener('click', () => {
+      const reply = document.getElementById('replyComment').value.trim(); const dm = document.getElementById('dmMessage').value.trim();
+      if (!reply && !dm) { showToast('Add at least one action (Reply or DM)', 'error'); return; }
+      currentWorkflow.actions.push({ reply: reply || null, dm: dm || null }); closeModal('actionModal'); document.getElementById('replyComment').value=''; document.getElementById('dmMessage').value=''; renderWorkflow();
+    });
+
+    // Persist
+    async function persistWorkflow() {
+      if (!currentWorkflow.name) { openModal('workflowNameModal'); return; }
+      if (!((currentWorkflow.triggers||[])[0]?.type)) { showToast('Add at least one trigger (type)', 'error'); return; }
+      if (!currentWorkflow.actions || currentWorkflow.actions.length === 0) { showToast('Add at least one action', 'error'); return; }
+
+      // Map UI (triggers/actions arrays) -> Backend schema {trigger, conditions}
+      const firstTrigger = (currentWorkflow.triggers||[])[0] || { type: '', condition: '' };
+      const firstAction = (currentWorkflow.actions||[])[0] || {};
+      const payload = {
+        name: currentWorkflow.name,
+        trigger: firstTrigger.type || '',
+        conditions: [ { condition: firstTrigger.condition || '', actions: Object.keys(firstAction).length ? [ firstAction ] : [] } ]
+      };
+      showLoader(currentWorkflow.id ? 'Updating workflow…' : 'Creating workflow…');
+      try {
+        if (currentWorkflow.id) {
+          await api.put(`/workflows/${id}`, payload);
+          showToast('Workflow updated');
+        } else {
+          const { data } = await api.post('/workflows', payload);
+          currentWorkflow.id = (data && (data.id || data._id)) || currentWorkflow.id;
+          showToast('Workflow created');
+        }
+      } catch (e) {
+        showToast('Failed to save workflow', 'error');
+      } finally { hideLoader(); refreshExistingWorkflows(); }
+    }
+
+    // Existing workflows
+    async function refreshExistingWorkflows() {
+      const list = document.getElementById('wfList'); const q = (document.getElementById('wfFilter').value || '').toLowerCase(); list.innerHTML = '';
+      try { const { data } = await api.get('/workflows'); const items = (data || []).filter(w => !q || (w.name || '').toLowerCase().includes(q));
+        if (items.length === 0) { list.innerHTML = '<div class="wf-empty">No workflows found.</div>'; return; }
+        items.forEach(w => {
+          const el = document.createElement('div'); el.className = 'wf-card';
+          el.innerHTML = `
+            <div>
+              <h4>${w.name || 'Untitled'}</h4>
+              <div class="muted">ID: ${(w.id || w._id || '-')}</div>
+            </div>
+            <div class="actions">
+              <!-- inside loadWorkflowsList() where you build each card -->
+              <button class="glow-btn secondary" data-wfid="${w.id}" data-act="edit">Preview</button>
+              <button class="glow-btn danger" data-id="${w.id || w._id}" data-act="del">Delete</button>
+            </div>`;
+          el.querySelector('[data-act="edit"]').addEventListener('click', () => editWorkflow(w.id || w._id));
+          el.querySelector('[data-act="del"]').addEventListener('click', () => deleteWorkflow(w.id || w._id));
+          list.appendChild(el);
+        });
+      } catch (e) { list.innerHTML = '<div class="wf-empty">Failed to load workflows.</div>'; }
+    }
+
+    function editWorkflowFromList(e) {
+      const idAttr = e.currentTarget.getAttribute('data-wfid');
+      const id = Number(idAttr); // normalize to number
+      if (Number.isNaN(id)) {
+        console.error('Preview/Edit clicked but id is NaN. Raw attr:', idAttr);
+        showToast('Could not read workflow id', 'error');
+        return;
+      }
+      editWorkflow(id);
+    }
+
+    async function editWorkflow(id) {
+      showLoader('Loading workflow…');
+      try {
+        const { data } = await api.get('/workflows');
+        const wf = (data || []).find(w => Number(w.id) === Number(id));
+        if (!wf) throw new Error('Workflow not found');
+
+        // Convert DB → UI shape
+        currentWorkflow = {
+          id: wf.id,
+          name: wf.name || 'Untitled Workflow',
+          triggers: [
+            { type: wf.trigger || '', condition: wf.conditions?.[0]?.condition || '' }
+          ],
+          actions: wf.conditions?.[0]?.actions || []
+        };
+
+        renderWorkflow();
+        // 🔥 Switch tab from "Existing" → "Create New"
+        document.getElementById('wfTabCreate').click();
+
+        showToast('Loaded workflow');
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load workflow','error');
+      } finally {
+        hideLoader();
+      }
+    }
 
 
-// Restore active tab after page reload
-document.addEventListener("DOMContentLoaded", () => {
-  const activeTab = localStorage.getItem("activeTab");
-  if (activeTab) {
-    const tabButton = document.querySelector(`.nav-btn[data-tab="${activeTab}"]`);
-    if (tabButton) tabButton.click();
-    localStorage.removeItem("activeTab");
-  }
-});
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  showLoader("Logging out...");
-  api.post("/logout").then(() => {
-    window.location.href = "/login";
-  }).catch(err => {
-    hideLoader();
-    showToast("Error logging out: " + err.message, "error");
-  });
-});
+    async function deleteWorkflow(id) {
+      if (!confirm('Delete this workflow permanently?')) return;
+      showLoader('Deleting workflow…');
+      try { await api.delete(`/workflows/${id}`); showToast('Workflow deleted'); refreshExistingWorkflows(); }
+      catch (e) { showToast('Failed to delete', 'error'); }
+      finally { hideLoader(); }
+    }
 
+    function loadWorkflow() {
+      const root = document.getElementById('workflowRoot');
+      if (!wfBuilt) { buildWorkflowUI(root); wfBuilt = true; }
+      feather.replace();
+    }
 
-</script>
+    /* ---------- Init ---------- */
+    document.getElementById('logoutBtn').addEventListener('click', async () => { try { await api.post('/logout'); location.reload(); } catch (e) { location.href = '/logout'; } });
+    document.addEventListener('DOMContentLoaded', () => { loadAccountStatus(); feather.replace(); });
+  </script>
 </body>
 </html>

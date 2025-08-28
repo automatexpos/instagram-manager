@@ -402,3 +402,73 @@ def api_update_post(post_id):
         updates["scheduled_time"] = data["scheduled_time"]
     supabase.table("posts_db_all").update(updates).eq("id", post_id).eq("user_name", session["user"]["user_name"]).execute()
     return jsonify({"status": "updated"})
+
+
+# ---------- Workflows API ----------
+@app.route("/api/workflows", methods=["GET", "POST"])
+def api_workflows():
+    if "user" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+    
+    username = session["user"]["user_name"]
+
+    if request.method == "POST":
+        data = request.get_json()
+
+        # enforce max 5 conditions
+        if len(data.get("conditions", [])) > 5:
+            return jsonify({"error": "At most 5 conditions allowed"}), 400
+
+        # enforce single action per condition
+        for cond in data.get("conditions", []):
+            if "actions" in cond and len(cond["actions"]) > 1:
+                return jsonify({"error": "Only 1 action allowed per condition"}), 400
+
+        workflow = {
+            "user_name": username,
+            "name": data.get("name", "Untitled Workflow"),
+            "trigger": data.get("trigger", ""),
+            # Ensure conditions/actions are always JSON
+            "conditions": data.get("conditions", []),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        supabase.table("workflows").insert(workflow).execute()
+        return jsonify({"status": "created"})
+
+    # GET workflows for this user
+    rows = (supabase.table("workflows")
+                   .select("id, name, trigger, conditions, created_at")
+                   .eq("user_name", username)
+                   .order("created_at", desc=True)
+                   .execute()
+                   .data)
+    return jsonify(rows)
+
+
+@app.route("/api/workflows/<int:workflow_id>", methods=["PUT", "DELETE"])
+def api_update_workflow(workflow_id):
+    if "user" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+    
+    username = session["user"]["user_name"]
+
+    if request.method == "PUT":
+        data = request.get_json()
+
+        # enforce limits
+        if len(data.get("conditions", [])) > 5:
+            return jsonify({"error": "At most 5 conditions allowed"}), 400
+        for cond in data.get("conditions", []):
+            if "actions" in cond and len(cond["actions"]) > 1:
+                return jsonify({"error": "Only 1 action allowed per condition"}), 400
+
+        supabase.table("workflows").update({
+            "name": data.get("name", "Untitled Workflow"),
+            "trigger": data.get("trigger", ""),
+            "conditions": data.get("conditions", [])
+        }).eq("id", workflow_id).eq("user_name", username).execute()
+        return jsonify({"status": "updated"})
+
+    # DELETE
+    supabase.table("workflows").delete().eq("id", workflow_id).eq("user_name", username).execute()
+    return jsonify({"status": "deleted"})

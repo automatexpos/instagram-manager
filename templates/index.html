@@ -103,6 +103,8 @@
         <!-- <button data-tab="insights" class="nav-btn">Insights</button> -->
         <button data-tab="posts" class="nav-btn">Posts</button>
         <button data-tab="workflow" class="nav-btn">Workflow</button>
+        <button data-tab="uploadPosts" class="nav-btn">Upload Posts</button>
+
       </nav>
       <div class="logout-container">
         <button id="logoutBtn" class="nav-btn">Logout</button>
@@ -121,8 +123,11 @@
         <h2>Configuration</h2>
         <div class="glass-card">
           <form id="configForm">
+            <a href="https://youtu.be/2Oh01cJ-v6E" target="_blank">Instagram Access Token + Business ID</a>
             <label>Instagram Extended Access Token<input type="password" name="inst_access_token" required /></label>
             <label>Instagram Business User ID<input name="ig_user_id" required /></label>
+
+            <a href="{{ url_for('cloudinary_page') }}" target="_blank">Cloudinary Setup Guide</a>
             <label>Cloudinary Cloud Name<input name="cloudinary_cloud_name" required /></label>
             <label>Cloudinary API Key<input name="cloudinary_api_key" required /></label>
             <label>Cloudinary API Secret<input type="password" name="cloudinary_api_secret" required /></label>
@@ -203,8 +208,31 @@
           <!-- Populated by enhancement script -->
         </div>
       </div>
+        <!-- Upload Posts -->
+      <div class="tab-panel" id="uploadPosts">
+        <h2>Upload Posts</h2>
+        <div class="glass-card">
+          <div class="actions">
+            <input id="uploadInput"type="file"accept=".png,.jpg,.jpeg,.mp4"multiple hidden />
+            <!-- <button id="uploadBtn" type="button" class="glow-btn">Upload</button> -->
+            <button id="uploadBtn" onclick="triggerUpload()">Upload</button>
+
+            <input id="uploadInput" type="file" accept=".png,.jpg,.jpeg,.mp4" multiple hidden onchange="onSelectFiles(event)">
+
+            <button id="refreshGalleryBtn" type="button" class="glow-btn secondary">Refresh</button>
+            <button id="deleteSelectedBtn" onclick="deleteSelected()">Delete Selected</button>
+            
+            <span id="uploadStatus" class="muted"></span>
+          </div>
+          <div id="selectedFiles" class="upload-tip"></div>
+          <div id="uploadGallery" class="upload-grid" style="margin-top:12px;"></div>
+        </div>
+      </div>      
     </section>
   </main>
+
+
+
 
   <!-- Global Loader -->
   <div id="loaderOverlay" class="loader-overlay">
@@ -307,6 +335,8 @@
           case 'insights': loadInsights(); break;
           case 'posts': loadPosts(); break;
           case 'workflow': loadWorkflow(); break;
+          case 'uploadPosts': loadCloudinaryMedia(); break;
+
         }
       });
     });
@@ -436,6 +466,155 @@
     function openDelete(id) { deletePostId = id; document.getElementById('deleteModal').style.display = 'grid'; }
     document.getElementById('cancelDelete').onclick = () => { document.getElementById('deleteModal').style.display = 'none'; deletePostId = null; };
     document.getElementById('confirmDelete').onclick = async () => { if (!deletePostId) return; showLoader('Deleting post…'); try { await api.delete(`/posts/${deletePostId}`); showToast('Post deleted'); } catch(e){ showToast('Failed to delete', 'error'); } finally { hideLoader(); document.getElementById('deleteModal').style.display = 'none'; if (calendarInstance) calendarInstance.refetchEvents(); }};
+
+
+    /* ---------- Upload Posts (multi-image Cloudinary) ---------- */
+    const uploadInputEl = document.getElementById('uploadInput');
+    const uploadBtnEl = document.getElementById('uploadBtn');
+    const refreshGalleryBtnEl = document.getElementById('refreshGalleryBtn');
+    const selectedFilesEl = document.getElementById('selectedFiles');
+    const uploadGalleryEl = document.getElementById('uploadGallery');
+
+    if (uploadBtnEl) uploadBtnEl.addEventListener('click', () => uploadInputEl.click());
+    if (refreshGalleryBtnEl) refreshGalleryBtnEl.addEventListener('click', loadCloudinaryMedia);
+    if (uploadInputEl) uploadInputEl.addEventListener('change', onSelectFiles);
+
+function renderGallery(items) {
+  uploadGalleryEl.innerHTML = '';
+  if (!Array.isArray(items) || items.length === 0) {
+    uploadGalleryEl.innerHTML = '<div class="wf-empty">No media found.</div>';
+    return;
+  }
+  items.forEach(it => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'gallery-item';
+    wrapper.style.position = 'relative';
+
+    let el;
+    const url = it.secure_url || it.url || (typeof it === 'string' ? it : '');
+    if (it.resource_type === 'video' || url.endsWith('.mp4')) {
+      el = document.createElement('video');
+      el.src = url;
+      el.muted = true;
+      el.loop = true;
+      el.autoplay = true;
+    } else {
+      el = document.createElement('img');
+      el.src = url;
+    }
+    el.alt = it.public_id || 'media';
+
+    // checkbox overlay
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = it.public_id;
+    checkbox.className = 'gallery-checkbox';
+    checkbox.style.position = 'absolute';
+    checkbox.style.top = '5px';
+    checkbox.style.left = '5px';
+
+    wrapper.appendChild(el);
+    wrapper.appendChild(checkbox);
+    uploadGalleryEl.appendChild(wrapper);
+  });
+}
+
+async function deleteSelected() {
+  const selected = Array.from(document.querySelectorAll('.gallery-checkbox:checked'))
+                        .map(cb => cb.value);
+
+  if (selected.length === 0) {
+    alert("No media selected.");
+    return;
+  }
+
+  if (!confirm("Delete " + selected.length + " selected items?")) return;
+
+  try {
+    const { data } = await api.post('/delete_images', { public_ids: selected });
+    showToast('Deleted ' + selected.length + ' items');
+    loadCloudinaryMedia(); // refresh gallery
+  } catch (err) {
+    showToast('Error deleting: ' + err.message, 'error');
+  }
+}
+
+    async function onSelectFiles(e) {
+      const allowedTypes = ['image/png', 'image/jpeg', 'video/mp4'];
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      const invalid = files.filter(f => !allowedTypes.includes(f.type));
+      if (invalid.length > 0) {
+        alert("Only PNG, JPG, JPEG, and MP4 files are allowed.");
+        e.target.value = '';
+        return;
+      }
+
+      // Build a preview + naming modal
+      const modal = document.createElement('div');
+      modal.className = 'upload-modal';
+
+      modal.innerHTML = `
+        <div class="upload-modal-content">
+          <button type="button" class="modal-close" onclick="this.closest('.upload-modal').remove()">×</button>
+          <h3>Name your uploads</h3>
+          <form id="nameForm">
+            ${files.map((f, i) => `
+              <div class="file-preview">
+                ${f.type.startsWith('video') 
+                  ? `<video src="${URL.createObjectURL(f)}" width="80" height="80" muted autoplay loop></video>`
+                  : `<img src="${URL.createObjectURL(f)}" width="80" height="80">`
+                }
+                <input type="text" name="name${i}" placeholder="Enter name for ${f.name}" value="${f.name.split('.')[0]}">
+              </div>
+            `).join('')}
+            <button type="submit" class="upload-all-btn">Upload All</button>
+          </form>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      // handle form submit
+      document.getElementById('nameForm').onsubmit = async function(ev) {
+        ev.preventDefault();
+        showLoader('Uploading…');
+
+        try {
+          const formData = new FormData();
+          files.forEach((file, i) => {
+            const inputVal = document.querySelector(`[name="name${i}"]`).value || file.name.split('.')[0];
+            formData.append("images", file);
+            formData.append("names", inputVal);
+          });
+
+          const { data } = await api.post('/upload_images', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+
+          showToast('Uploaded ' + (data.uploaded?.length || 0) + ' files');
+          loadCloudinaryMedia(); // refresh gallery
+        } catch (err) {
+          showToast('Error: ' + err.message, 'error');
+        } finally {
+          hideLoader();
+          e.target.value = '';
+          modal.remove(); // close modal
+        }
+      }
+    }
+
+    async function loadCloudinaryMedia() {
+      showLoader('Loading gallery…');
+      try {
+        const { data } = await api.get('/cloudinary_media');
+        renderGallery(data.resources || []);
+      } catch (err) {
+        showToast('Failed to load gallery', 'error');
+      } finally {
+        hideLoader();
+      }
+    }
 
     /* ---------- WORKFLOW ENHANCEMENTS (Box 2 only) ---------- */
     let wfBuilt = false; let currentWorkflow = { id: null, name: '', triggers: [], actions: [] };
@@ -659,8 +838,6 @@
       }
     }
 
-
-
     async function deleteWorkflow(id) {
       if (!confirm('Delete this workflow permanently?')) return;
       showLoader('Deleting workflow…');
@@ -674,6 +851,14 @@
       if (!wfBuilt) { buildWorkflowUI(root); wfBuilt = true; }
       feather.replace();
     }
+
+  function triggerUpload() {
+    if (!confirm('⚠️ Make sure to name your post with the appropriate product name like "Shoes", "Bags" etc to generate relevant AI Caption.')) {
+      return;
+    }
+    document.getElementById('uploadInput').click();
+  }
+
 
     /* ---------- Init ---------- */
     document.getElementById('logoutBtn').addEventListener('click', async () => { try { await api.post('/logout'); location.reload(); } catch (e) { location.href = '/logout'; } });

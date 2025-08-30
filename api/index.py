@@ -10,6 +10,8 @@ import cloudinary
 import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import cloudinary.uploader
+import cloudinary.api
 
 
 # Compute paths so templates/static are found regardless of working dir
@@ -238,6 +240,14 @@ def api_config():
         "cloudinary_api_key": user.get("cloudinary_api_key", ""),
         "cloudinary_api_secret": user.get("cloudinary_api_secret", ""),
     })
+
+@app.route("/cloudinary")
+def cloudinary_page():
+    return render_template("cloudinary.html")
+
+@app.route("/instagram-token")
+def instagram_token_page():
+    return render_template("instagram_token.html")
 
 
 @app.route("/api/business", methods=["GET", "POST"])
@@ -472,3 +482,128 @@ def api_update_workflow(workflow_id):
     # DELETE
     supabase.table("workflows").delete().eq("id", workflow_id).eq("user_name", username).execute()
     return jsonify({"status": "deleted"})
+
+@app.route("/api/upload_images", methods=["POST"])
+def api_upload_images():
+    if "user" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+
+    username = session["user"]["user_name"]
+    try:
+        load_cloudinary_config(username)
+    except Exception as e:
+        return jsonify({"error": f"Cloudinary not configured: {e}"}), 400
+
+    files = request.files.getlist("images")
+    names = request.form.getlist("names")
+    if not files:
+        return jsonify({"error": "No files provided"}), 400
+
+    allowed_ext = {".png", ".jpg", ".jpeg", ".mp4"}
+    uploaded = []
+    for i, f in enumerate(files):
+        filename = f.filename.lower()
+        if not any(filename.endswith(ext) for ext in allowed_ext):
+            uploaded.append({"error": f"File type not allowed: {filename}"})
+            continue
+
+        try:
+            custom_name = names[i] if i < len(names) else None
+            res = cloudinary.uploader.upload(
+                f,
+                folder=f"{username}/uploads",
+                public_id=custom_name,
+                resource_type="auto"  # auto-detect image vs video
+            )
+            uploaded.append({
+                "public_id": res.get("public_id"),
+                "secure_url": res.get("secure_url"),
+                "width": res.get("width"),
+                "height": res.get("height"),
+                "format": res.get("format")
+            })
+        except Exception as e:
+            uploaded.append({"error": str(e)})
+
+    return jsonify({"uploaded": uploaded})
+
+
+@app.route("/api/cloudinary_media", methods=["GET"])
+def api_cloudinary_media():
+    if "user" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+
+    username = session["user"]["user_name"]
+    try:
+        load_cloudinary_config(username)
+    except Exception as e:
+        return jsonify({"error": f"Cloudinary not configured: {e}", "resources": []}), 200
+
+    try:
+        resources = []
+
+        # fetch images
+        img_res = cloudinary.api.resources(
+            resource_type="image",
+            type="upload",
+            max_results=500,
+            direction="desc"
+        )
+        resources.extend([
+            {
+                "public_id": r.get("public_id"),
+                "secure_url": r.get("secure_url") or r.get("url"),
+                "resource_type": "image",
+                "format": r.get("format"),
+            } for r in img_res.get("resources", [])
+        ])
+
+        # fetch videos
+        vid_res = cloudinary.api.resources(
+            resource_type="video",
+            type="upload",
+            max_results=500,
+            direction="desc"
+        )
+        resources.extend([
+            {
+                "public_id": r.get("public_id"),
+                "secure_url": r.get("secure_url") or r.get("url"),
+                "resource_type": "video",
+                "format": r.get("format"),
+            } for r in vid_res.get("resources", [])
+        ])
+
+        return jsonify({"resources": resources})
+
+    except Exception as e:
+        return jsonify({"error": str(e), "resources": []}), 200
+
+
+@app.route("/api/delete_images", methods=["POST"])
+def api_delete_images():
+    if "user" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+
+    username = session["user"]["user_name"]
+    try:
+        load_cloudinary_config(username)
+    except Exception as e:
+        return jsonify({"error": f"Cloudinary not configured: {e}"}), 400
+
+    public_ids = request.json.get("public_ids", [])
+    if not public_ids:
+        return jsonify({"error": "No public_ids provided"}), 400
+
+    deleted = []
+    for pid in public_ids:
+        try:
+            res = cloudinary.uploader.destroy(pid, resource_type="image")
+            if res.get("result") == "not found":
+                # try as video
+                res = cloudinary.uploader.destroy(pid, resource_type="video")
+            deleted.append({"public_id": pid, "result": res.get("result")})
+        except Exception as e:
+            deleted.append({"public_id": pid, "error": str(e)})
+
+    return jsonify({"deleted": deleted})

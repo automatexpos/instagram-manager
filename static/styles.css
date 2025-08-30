@@ -155,3 +155,131 @@ textarea { min-height: 90px; resize: vertical; }
 ====================== */
 .flex-container { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
 .post-details { background: var(--panel); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 16px; min-height: 260px; }
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 100px); /* exactly 10 fixed-size columns */
+  gap: 6px;
+  justify-content: center; /* center the grid */
+}
+
+.upload-grid img,
+.upload-grid video {
+  width: 100px;       /* fixed thumbnail width */
+  height: 100px;      /* fixed thumbnail height */
+  object-fit: cover;  /* crop nicely */
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.gallery-item {
+  position: relative;
+}
+
+.gallery-checkbox {
+  transform: scale(1.2);
+  background: white;
+}
+
+#deleteSelectedBtn {
+  background-color: #e63946; /* red */
+  color: white;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px; /* curved box */
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 12px;
+  transition: background 0.2s ease;
+}
+
+#deleteSelectedBtn:hover {
+  background-color: #c9182b; /* darker red on hover */
+}
+
+
+.upload-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.75); /* darker overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.upload-modal-content {
+  background: #1f2937; /* dark gray */
+  color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-height: 80vh;
+  overflow-y: auto;
+  width: 400px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.upload-modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff; /* visible header */
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+.modal-close:hover {
+  color: #f87171; /* light red */
+}
+
+.upload-all-btn {
+  margin-top: 12px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.upload-all-btn:hover {
+  background: #1e4ed8;
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.file-preview img,
+.file-preview video {
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  object-fit: cover;
+}
+
+
+#uploadBtn {
+  background-color: #2563eb; /* blue */
+  color: white;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s ease;
+}
+
+#uploadBtn:hover {
+  background-color: #1e4ed8;
+}

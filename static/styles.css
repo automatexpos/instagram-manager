@@ -283,3 +283,16 @@ textarea { min-height: 90px; resize: vertical; }
 #uploadBtn:hover {
   background-color: #1e4ed8;
 }
+
+.error-banner {
+  display: inline-block;     /* makes box fit text */
+  background: #fee2e2;       /* light red */
+  color: #b91c1c;            /* dark red text */
+  padding: 12px 18px;
+  border-radius: 6px;
+  margin: 0 auto 12px auto;  /* centers the banner */
+  font-weight: 500;
+  border: 1px solid #fca5a5;
+  white-space: nowrap;       /* keep text in one line */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}

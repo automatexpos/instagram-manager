@@ -190,11 +190,14 @@ def load_cloudinary_config(username: str):
                     .data)
     if not row:
         raise ValueError("Cloudinary credentials missing")
-    cloudinary.config(
-        cloud_name=row["cloudinary_cloud_name"],
-        api_key=row["cloudinary_api_key"],
-        api_secret=row["cloudinary_api_secret"]
-    )
+    else:
+        cloudinary.config(
+            cloud_name=row["cloudinary_cloud_name"],
+            api_key=row["cloudinary_api_key"],
+            api_secret=row["cloudinary_api_secret"]
+        )
+        return True
+
 
 
 # ---------- JSON endpoints ----------
@@ -491,6 +494,7 @@ def api_upload_images():
     username = session["user"]["user_name"]
     try:
         load_cloudinary_config(username)
+
     except Exception as e:
         return jsonify({"error": f"Cloudinary not configured: {e}"}), 400
 
@@ -535,9 +539,14 @@ def api_cloudinary_media():
 
     username = session["user"]["user_name"]
     try:
-        load_cloudinary_config(username)
+        status = load_cloudinary_config(username)
+        if not status:
+            print("Cloudinary not configured")
+            return jsonify({"error": "Cloudinary not configured", "resources": []}), 200
+        else:
+            print("Cloudinary configured")
     except Exception as e:
-        return jsonify({"error": f"Cloudinary not configured: {e}", "resources": []}), 200
+        return jsonify({"error": f"Cloudinary not configured: {str(e)}", "resources": []}), 200
 
     try:
         resources = []

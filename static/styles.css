@@ -296,3 +296,19 @@ textarea { min-height: 90px; resize: vertical; }
   white-space: nowrap;       /* keep text in one line */
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
+
+/* Progress bar uploading images to cloudinary */
+.progress-bar-container {
+  width: 100%;
+  background: rgba(255,255,255,.08);
+  border-radius: 8px;
+  margin: 18px 0 8px 0;
+  height: 18px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #5b9fff, #2563eb);
+  width: 0%;
+  transition: width 0.2s;
+}

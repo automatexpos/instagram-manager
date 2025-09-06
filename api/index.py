@@ -488,19 +488,26 @@ def api_update_workflow(workflow_id):
 
 @app.route("/api/upload_images", methods=["POST"])
 def api_upload_images():
+    print("Upload images called")
     if "user" not in session:
+        print("No user in session")
         return jsonify({"error": "unauthorized"}), 401
 
     username = session["user"]["user_name"]
+    print(f"Uploading for user: {username}")
     try:
         load_cloudinary_config(username)
-
+        print("Cloudinary config loaded")
     except Exception as e:
+        print(f"Cloudinary config error: {e}")
         return jsonify({"error": f"Cloudinary not configured: {e}"}), 400
 
     files = request.files.getlist("images")
     names = request.form.getlist("names")
+    print(f"Files received: {[f.filename for f in files]}")
+    print(f"Names received: {names}")
     if not files:
+        print("No files provided")
         return jsonify({"error": "No files provided"}), 400
 
     allowed_ext = {".png", ".jpg", ".jpeg", ".mp4"}
@@ -508,16 +515,18 @@ def api_upload_images():
     for i, f in enumerate(files):
         filename = f.filename.lower()
         if not any(filename.endswith(ext) for ext in allowed_ext):
+            print(f"File type not allowed: {filename}")
             uploaded.append({"error": f"File type not allowed: {filename}"})
             continue
 
         try:
             custom_name = names[i] if i < len(names) else None
+            print(f"Uploading {filename} as {custom_name}")
             res = cloudinary.uploader.upload(
                 f,
                 folder=f"{username}/uploads",
                 public_id=custom_name,
-                resource_type="auto"  # auto-detect image vs video
+                resource_type="auto"
             )
             uploaded.append({
                 "public_id": res.get("public_id"),
@@ -527,8 +536,10 @@ def api_upload_images():
                 "format": res.get("format")
             })
         except Exception as e:
+            print(f"Upload error: {e}")
             uploaded.append({"error": str(e)})
 
+    print(f"Upload results: {uploaded}")
     return jsonify({"uploaded": uploaded})
 
 
@@ -606,6 +617,7 @@ def api_delete_images():
 
     deleted = []
     for pid in public_ids:
+        print(f"Deleting {pid}...")
         try:
             res = cloudinary.uploader.destroy(pid, resource_type="image")
             if res.get("result") == "not found":
